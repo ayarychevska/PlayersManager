@@ -1,0 +1,1393 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Players Manager</title>
+    <style>
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background: #0f172a;
+            color: #e2e8f0;
+            min-height: 100vh;
+            display: flex;
+        }
+
+        /* ── Sidebar ── */
+        .sidebar {
+            width: 220px;
+            min-height: 100vh;
+            background: #1e293b;
+            border-right: 1px solid #334155;
+            display: flex;
+            flex-direction: column;
+            flex-shrink: 0;
+        }
+
+        .sidebar-header {
+            padding: 1.25rem 1rem;
+            display: flex;
+            align-items: center;
+            gap: 0.6rem;
+            border-bottom: 1px solid #334155;
+        }
+
+        .sidebar-header h1 {
+            font-size: 1rem;
+            font-weight: 600;
+            color: #38bdf8;
+        }
+
+        .nav-btn {
+            display: flex;
+            align-items: center;
+            gap: 0.6rem;
+            width: 100%;
+            padding: 0.75rem 1rem;
+            background: transparent;
+            border: none;
+            color: #94a3b8;
+            font-size: 0.85rem;
+            cursor: pointer;
+            text-align: left;
+            border-left: 3px solid transparent;
+            transition: background .15s, color .15s, border-color .15s;
+        }
+
+        .nav-btn:hover { background: #0f172a44; color: #e2e8f0; }
+        .nav-btn.active { color: #38bdf8; background: #0f172a66; border-left-color: #38bdf8; }
+
+        .hidden-tab { display: none !important; }
+
+        /* ── Main ── */
+        .main {
+            flex: 1;
+            padding: 2rem;
+            overflow-y: auto;
+        }
+
+        .tab-panel { display: none; }
+        .tab-panel.active { display: block; }
+
+        /* ── Card ── */
+        .card {
+            background: #1e293b;
+            border: 1px solid #334155;
+            border-radius: 0.75rem;
+            padding: 1.5rem;
+        }
+
+        .card h2 {
+            font-size: 1rem;
+            margin-bottom: 1rem;
+            color: #94a3b8;
+            font-weight: 500;
+        }
+
+        /* ── Import area ── */
+        .import-area {
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+        }
+
+        textarea {
+            width: 100%;
+            min-height: 160px;
+            background: #0f172a;
+            border: 1px solid #334155;
+            border-radius: 0.5rem;
+            padding: 0.75rem;
+            color: #e2e8f0;
+            font-family: "Cascadia Code", "Fira Code", monospace;
+            font-size: 0.85rem;
+            resize: vertical;
+        }
+
+        textarea:focus { outline: none; border-color: #38bdf8; }
+
+        .btn-row { display: flex; gap: 0.5rem; align-items: center; }
+
+        button {
+            padding: 0.55rem 1.25rem;
+            border: none;
+            border-radius: 0.5rem;
+            font-size: 0.85rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: background .15s;
+        }
+
+        .btn-primary { background: #38bdf8; color: #0f172a; }
+        .btn-primary:hover { background: #7dd3fc; }
+        .btn-secondary { background: #334155; color: #e2e8f0; }
+        .btn-secondary:hover { background: #475569; }
+
+        .status {
+            font-size: 0.8rem;
+            padding: 0.4rem 0.75rem;
+            border-radius: 0.375rem;
+            display: none;
+        }
+
+        .status.success { display: inline-block; background: #064e3b; color: #6ee7b7; }
+        .status.error   { display: inline-block; background: #7f1d1d; color: #fca5a5; }
+
+        /* ── Table ── */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.85rem;
+        }
+
+        th {
+            text-align: left;
+            padding: 0.6rem 0.75rem;
+            color: #64748b;
+            font-weight: 500;
+            border-bottom: 1px solid #334155;
+        }
+
+        td {
+            padding: 0.6rem 0.75rem;
+            border-bottom: 1px solid #1e293b;
+        }
+
+        tr:hover td { background: #1e293b88; }
+
+        .clickable { cursor: pointer; color: #38bdf8; }
+        .clickable:hover { text-decoration: underline; }
+
+        .empty-msg {
+            text-align: center;
+            color: #475569;
+            padding: 2rem;
+            font-size: 0.9rem;
+        }
+
+        .back-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.35rem;
+            color: #38bdf8;
+            font-size: 0.8rem;
+            cursor: pointer;
+            margin-bottom: 0.75rem;
+        }
+
+        .back-link:hover { text-decoration: underline; }
+
+        .badge {
+            background: #334155;
+            color: #94a3b8;
+            padding: 0.15rem 0.5rem;
+            border-radius: 999px;
+            font-size: 0.75rem;
+        }
+
+        .badge-active  { background: #065f46; color: #6ee7b7; }
+        .badge-inactive { background: #7f1d1d; color: #fca5a5; }
+        .badge-matched    { background: #065f46; color: #6ee7b7; }
+        .badge-notmatched { background: #78350f; color: #fcd34d; }
+
+        .btn-danger { background: #991b1b; color: #fca5a5; }
+        .btn-danger:hover { background: #b91c1c; }
+
+        .btn-sm {
+            padding: 0.3rem 0.75rem;
+            font-size: 0.75rem;
+        }
+
+        .detail-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 1rem;
+        }
+
+        .detail-header h2 { margin-bottom: 0; }
+
+        .inline-edit {
+            background: #0f172a;
+            border: 1px solid #38bdf8;
+            border-radius: 0.375rem;
+            padding: 0.25rem 0.5rem;
+            color: #e2e8f0;
+            font-size: 0.85rem;
+            font-family: inherit;
+            width: 100%;
+        }
+
+        .inline-edit:focus { outline: none; }
+
+        .actions-cell {
+            display: flex;
+            gap: 0.35rem;
+            align-items: center;
+        }
+
+        .btn-icon {
+            background: transparent;
+            border: 1px solid #334155;
+            color: #94a3b8;
+            padding: 0.25rem 0.5rem;
+            border-radius: 0.375rem;
+            font-size: 0.75rem;
+            cursor: pointer;
+            transition: background .15s, color .15s;
+        }
+
+        .btn-icon:hover { background: #334155; color: #e2e8f0; }
+        .btn-icon.save { border-color: #065f46; color: #6ee7b7; }
+        .btn-icon.save:hover { background: #065f46; }
+        .btn-icon.cancel { border-color: #7f1d1d; color: #fca5a5; }
+        .btn-icon.cancel:hover { background: #7f1d1d; }
+
+        /* ── Player cards grid ── */
+        .player-grid {
+            display: grid;
+            gap: 1rem;
+        }
+
+        .player-grid.cols-1 { grid-template-columns: 1fr; }
+        .player-grid.cols-2 { grid-template-columns: repeat(2, 1fr); }
+        .player-grid.cols-3 { grid-template-columns: repeat(3, 1fr); }
+        .player-grid.cols-5 { grid-template-columns: repeat(5, 1fr); }
+
+        .players-toolbar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 1rem;
+        }
+
+        .view-select {
+            background: #0f172a;
+            border: 1px solid #334155;
+            border-radius: 0.375rem;
+            padding: 0.35rem 0.6rem;
+            color: #e2e8f0;
+            font-size: 0.8rem;
+            font-family: inherit;
+            cursor: pointer;
+            color-scheme: dark;
+        }
+
+        .view-select:focus { outline: none; border-color: #38bdf8; }
+
+        .player-card {
+            background: #0f172a;
+            border: 1px solid #334155;
+            border-radius: 0.625rem;
+            padding: 1rem 1.15rem;
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        .player-card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .player-card-header .nickname {
+            font-weight: 600;
+            font-size: 0.95rem;
+            color: #e2e8f0;
+        }
+
+        .player-card-row {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.8rem;
+            color: #94a3b8;
+        }
+
+        .player-card-row span:last-child { color: #e2e8f0; }
+
+        .player-card-actions {
+            display: flex;
+            gap: 0.35rem;
+            margin-top: 0.25rem;
+        }
+
+        .status-toggle {
+            background: transparent;
+            border: 1px solid #334155;
+            color: #94a3b8;
+            padding: 0.25rem 0.6rem;
+            border-radius: 0.375rem;
+            font-size: 0.7rem;
+            cursor: pointer;
+            transition: background .15s, color .15s;
+        }
+
+        .status-toggle:hover { background: #334155; color: #e2e8f0; }
+
+        .date-input {
+            background: #0f172a;
+            border: 1px solid #334155;
+            border-radius: 0.5rem;
+            padding: 0.5rem 0.75rem;
+            color: #e2e8f0;
+            font-size: 0.85rem;
+            font-family: inherit;
+            color-scheme: dark;
+        }
+
+        .date-input:focus { outline: none; border-color: #38bdf8; }
+
+        .btn-success { background: #065f46; color: #6ee7b7; }
+        .btn-success:hover { background: #047857; }
+
+        .section-title {
+            font-size: 0.85rem;
+            color: #64748b;
+            margin: 1.25rem 0 0.5rem;
+            font-weight: 500;
+        }
+
+        .section-title:first-child { margin-top: 0; }
+
+        .history-timeline {
+            position: relative;
+            padding-left: 1.25rem;
+            margin-top: 0.5rem;
+        }
+
+        .history-timeline::before {
+            content: '';
+            position: absolute;
+            left: 0.35rem;
+            top: 0;
+            bottom: 0;
+            width: 2px;
+            background: #334155;
+        }
+
+        .history-item {
+            position: relative;
+            padding: 0.75rem 1rem;
+            margin-bottom: 0.75rem;
+            background: #0f172a;
+            border: 1px solid #334155;
+            border-radius: 0.5rem;
+        }
+
+        .history-item::before {
+            content: '';
+            position: absolute;
+            left: -1.15rem;
+            top: 1rem;
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #38bdf8;
+            border: 2px solid #1e293b;
+        }
+
+        .history-date {
+            font-size: 0.7rem;
+            color: #64748b;
+            margin-bottom: 0.35rem;
+        }
+
+        .history-fields {
+            display: flex;
+            gap: 2rem;
+            font-size: 0.8rem;
+        }
+
+        .history-fields span { color: #94a3b8; }
+        .history-fields strong { color: #e2e8f0; font-weight: 500; }
+
+        .current-data {
+            display: flex;
+            gap: 2rem;
+            padding: 1rem;
+            background: #0f172a;
+            border: 1px solid #38bdf8;
+            border-radius: 0.5rem;
+            font-size: 0.85rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .current-data .data-col {
+            display: flex;
+            flex-direction: column;
+            gap: 0.15rem;
+        }
+
+        .current-data .data-col span:first-child { color: #64748b; font-size: 0.75rem; }
+        .current-data .data-col span:last-child { color: #e2e8f0; }
+
+        /* ── Statistics table ── */
+        .stats-wrap {
+            overflow-x: auto;
+        }
+
+        .stats-wrap table {
+            min-width: 100%;
+        }
+
+        .stats-wrap th,
+        .stats-wrap td {
+            white-space: nowrap;
+        }
+
+        .stats-wrap .sticky-col {
+            position: sticky;
+            left: 0;
+            background: #1e293b;
+            z-index: 1;
+        }
+
+        .stats-wrap thead .sticky-col {
+            z-index: 2;
+        }
+
+        .stats-wrap .date-group {
+            text-align: center;
+            border-left: 1px solid #334155;
+        }
+
+        .diff-positive { color: #6ee7b7; }
+        .diff-negative { color: #fca5a5; }
+        .diff-zero     { color: #64748b; }
+        .no-data       { color: #334155; }
+
+        .match-actions {
+            display: flex;
+            gap: 0.35rem;
+            align-items: center;
+            flex-wrap: nowrap;
+        }
+
+        .match-select {
+            background: #0f172a;
+            border: 1px solid #334155;
+            border-radius: 0.375rem;
+            padding: 0.25rem 0.4rem;
+            color: #e2e8f0;
+            font-size: 0.75rem;
+            font-family: inherit;
+            max-width: 140px;
+            color-scheme: dark;
+        }
+
+        .match-select:focus { outline: none; border-color: #38bdf8; }
+
+        .btn-match { background: #1e3a5f; color: #7dd3fc; }
+        .btn-match:hover { background: #1e40af; }
+
+        .stats-wrap th.sortable {
+            cursor: pointer;
+            user-select: none;
+            position: relative;
+            padding-right: 1.2rem;
+        }
+
+        .stats-wrap th.sortable:hover { color: #e2e8f0; }
+
+        .stats-wrap th.sortable::after {
+            content: '\2195';
+            position: absolute;
+            right: 0.25rem;
+            opacity: 0.3;
+            font-size: 0.7rem;
+        }
+
+        .stats-wrap th.sort-asc::after  { content: '\2191'; opacity: 1; color: #38bdf8; }
+        .stats-wrap th.sort-desc::after { content: '\2193'; opacity: 1; color: #38bdf8; }
+
+        /* ── Players table view ── */
+        .players-table th.sortable {
+            cursor: pointer;
+            user-select: none;
+            position: relative;
+            padding-right: 1.2rem;
+        }
+
+        .players-table th.sortable:hover { color: #e2e8f0; }
+
+        .players-table th.sortable::after {
+            content: '\2195';
+            position: absolute;
+            right: 0.25rem;
+            opacity: 0.3;
+            font-size: 0.7rem;
+        }
+
+        .players-table th.sort-asc::after  { content: '\2191'; opacity: 1; color: #38bdf8; }
+        .players-table th.sort-desc::after { content: '\2193'; opacity: 1; color: #38bdf8; }
+    </style>
+</head>
+<body>
+    <nav class="sidebar">
+        <div class="sidebar-header">
+            <svg width="20" height="20" fill="none" stroke="#38bdf8" stroke-width="2" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+            <h1>Players Manager</h1>
+        </div>
+        <button class="nav-btn active" data-tab="import">&#128229; Import</button>
+        <button class="nav-btn" data-tab="batches">&#128451; Batches</button>
+        <button class="nav-btn hidden-tab" data-tab="batchDetails" id="batchDetailsTab">&#128196; Batch Details</button>
+        <button class="nav-btn" data-tab="players">&#128101; Players</button>
+        <button class="nav-btn hidden-tab" data-tab="playerDetails" id="playerDetailsTab">&#128100; Player Details</button>
+        <button class="nav-btn" data-tab="statistics">&#128202; Statistics</button>
+    </nav>
+
+    <div class="main">
+        <!-- Import Tab -->
+        <div id="import" class="tab-panel active">
+            <div class="card">
+                <h2>Import Players JSON</h2>
+                <div class="import-area">
+                    <div class="btn-row">
+                        <label style="color:#94a3b8;font-size:0.85rem;">Batch Date</label>
+                        <input type="date" id="batchDate" class="date-input" />
+                    </div>
+                    <textarea id="jsonInput" placeholder='[
+  { "nickname": "Eve", "power": "214.9M", "town_hall_level": "Gold 5" },
+  { "nickname": "Alice", "power": "310.2M", "town_hall_level": "Gold 7" }
+]'></textarea>
+                    <div class="btn-row">
+                        <button class="btn-primary" id="importBtn">Import</button>
+                        <button class="btn-secondary" id="clearBtn">Clear</button>
+                        <span class="status" id="importStatus"></span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Batches Tab -->
+        <div id="batches" class="tab-panel">
+            <div class="card">
+                <h2>All Batches</h2>
+                <div id="batchTableWrap"></div>
+            </div>
+        </div>
+
+        <!-- Batch Details Tab -->
+        <div id="batchDetails" class="tab-panel">
+            <div class="card">
+                <div class="detail-header">
+                    <div>
+                        <span class="back-link" id="backToBatches">&#8592; Back to batches</span>
+                        <h2 id="batchDetailTitle">Batch Records</h2>
+                    </div>
+                    <div class="btn-row">
+                        <button class="btn-success btn-sm" id="addAllPlayersBtn">Add All Players</button>
+                        <button class="btn-danger btn-sm" id="deleteBatchBtn">Delete Batch</button>
+                    </div>
+                </div>
+                <div id="batchRecordsWrap"></div>
+            </div>
+        </div>
+
+        <!-- Players Tab -->
+        <div id="players" class="tab-panel">
+            <div class="card">
+                <div class="players-toolbar">
+                    <h2 style="margin-bottom:0">All Players</h2>
+                    <div class="btn-row">
+                        <button class="btn-danger btn-sm" id="deleteAllPlayersBtn">Delete All</button>
+                        <label style="color:#64748b;font-size:0.8rem;">View</label>
+                        <select id="gridColsSelect" class="view-select">
+                            <option value="table" selected>Table</option>
+                            <option value="5">5 per row</option>
+                            <option value="3">3 per row</option>
+                            <option value="2">2 per row</option>
+                            <option value="1">1 per row</option>
+                        </select>
+                    </div>
+                </div>
+                <div id="playersTableWrap"></div>
+            </div>
+        </div>
+
+        <!-- Player Details Tab -->
+        <div id="playerDetails" class="tab-panel">
+            <div class="card">
+                <div class="detail-header">
+                    <div>
+                        <span class="back-link" id="backToPlayers">&#8592; Back to players</span>
+                        <h2 id="playerDetailTitle">Player Details</h2>
+                    </div>
+                </div>
+                <div id="playerDetailWrap"></div>
+            </div>
+        </div>
+
+        <!-- Statistics Tab -->
+        <div id="statistics" class="tab-panel">
+            <div class="card">
+                <h2>Power Statistics</h2>
+                <div id="statsWrap" class="stats-wrap"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API = '/api/players';
+
+        // ── Tabs ──
+        let currentBatchId = null;
+        let currentPlayerId = null;
+
+        function switchTab(tabName) {
+            document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+            document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+            const btn = document.querySelector(`.nav-btn[data-tab="${tabName}"]`);
+            if (btn) btn.classList.add('active');
+            document.getElementById(tabName).classList.add('active');
+
+            if (tabName === 'batches') {
+                document.getElementById('batchDetailsTab').classList.add('hidden-tab');
+                currentBatchId = null;
+                loadBatches();
+            }
+            if (tabName === 'batchDetails' && currentBatchId) {
+                document.getElementById('batchDetailsTab').classList.remove('hidden-tab');
+                loadBatchRecords(currentBatchId);
+            }
+            if (tabName === 'players') {
+                document.getElementById('playerDetailsTab').classList.add('hidden-tab');
+                currentPlayerId = null;
+                loadPlayers();
+            }
+            if (tabName === 'playerDetails' && currentPlayerId) {
+                document.getElementById('playerDetailsTab').classList.remove('hidden-tab');
+                loadPlayerDetails(currentPlayerId);
+            }
+            if (tabName === 'statistics') loadStatistics();
+        }
+
+        document.querySelectorAll('.nav-btn').forEach(btn => {
+            btn.addEventListener('click', () => switchTab(btn.dataset.tab));
+        });
+
+        // ── Import ──
+        const jsonInput = document.getElementById('jsonInput');
+        const importStatus = document.getElementById('importStatus');
+        const batchDateInput = document.getElementById('batchDate');
+        batchDateInput.valueAsDate = new Date();
+
+        document.getElementById('clearBtn').addEventListener('click', () => {
+            jsonInput.value = '';
+            importStatus.className = 'status';
+        });
+
+        document.getElementById('importBtn').addEventListener('click', async () => {
+            importStatus.className = 'status';
+
+            if (!batchDateInput.value) {
+                showStatus('Please select a batch date', false);
+                return;
+            }
+
+            let players;
+            try {
+                players = JSON.parse(jsonInput.value);
+            } catch {
+                showStatus('Invalid JSON', false);
+                return;
+            }
+
+            try {
+                const res = await fetch(`${API}/import`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ date: batchDateInput.value, players })
+                });
+                if (!res.ok) {
+                    const text = await res.text();
+                    showStatus(text || 'Import failed', false);
+                    return;
+                }
+                const result = await res.json();
+                showStatus(`Batch #${result.id} created — ${result.recordCount} records`, true);
+            } catch (err) {
+                showStatus('Network error', false);
+            }
+        });
+
+        function showStatus(msg, ok) {
+            importStatus.textContent = msg;
+            importStatus.className = 'status ' + (ok ? 'success' : 'error');
+        }
+
+        // ── Batches ──
+        async function loadBatches() {
+            const res = await fetch(`${API}/batches`);
+            const batches = await res.json();
+            const wrap = document.getElementById('batchTableWrap');
+
+            if (batches.length === 0) {
+                wrap.innerHTML = '<p class="empty-msg">No batches yet. Import some players!</p>';
+                return;
+            }
+
+            wrap.innerHTML = `<table>
+                <thead><tr><th>ID</th><th>Date</th><th>Records</th><th></th></tr></thead>
+                <tbody>${batches.map(b => `
+                    <tr>
+                        <td class="clickable" data-id="${b.id}">#${b.id}</td>
+                        <td>${new Date(b.date).toLocaleDateString()}</td>
+                        <td><span class="badge">${b.recordCount}</span></td>
+                        <td><button class="btn-danger btn-sm delete-batch-btn" data-id="${b.id}">Delete</button></td>
+                    </tr>`).join('')}
+                </tbody></table>`;
+
+            wrap.querySelectorAll('.clickable').forEach(el => {
+                el.addEventListener('click', () => openBatchDetails(el.dataset.id));
+            });
+
+            wrap.querySelectorAll('.delete-batch-btn').forEach(el => {
+                el.addEventListener('click', () => deleteBatch(el.dataset.id));
+            });
+        }
+
+        function openBatchDetails(id) {
+            currentBatchId = id;
+            switchTab('batchDetails');
+        }
+
+        async function loadBatchRecords(id) {
+            document.getElementById('batchDetailTitle').textContent = `Batch #${id} Records`;
+
+            const [batchRes, playersRes] = await Promise.all([
+                fetch(`${API}/batches/${id}/records`),
+                fetch(API)
+            ]);
+            const data = await batchRes.json();
+            const allPlayers = await playersRes.json();
+            const wrap = document.getElementById('batchRecordsWrap');
+
+            const records = data.records || [];
+            const matchedPlayerIds = new Set((data.matchedPlayerIds || []).map(String));
+            const missingPlayers = data.missingPlayers || [];
+
+            if (records.length === 0) {
+                wrap.innerHTML = '<p class="empty-msg">No records in this batch.</p>';
+                return;
+            }
+
+            const matched = records.filter(r => r.matchStatus === 'Matched');
+            const unmatched = records.filter(r => r.matchStatus !== 'Matched');
+
+            const matchedNicknames = new Set(matched.map(r => r.nickname.toLowerCase()));
+            const unmatchedNicknames = new Set(unmatched.map(r => r.nickname.toLowerCase()));
+
+            const availablePlayers = allPlayers.filter(p =>
+                !matchedPlayerIds.has(String(p.id)) &&
+                !matchedNicknames.has(p.nickname.toLowerCase()) &&
+                !unmatchedNicknames.has(p.nickname.toLowerCase())
+            );
+
+            const playerOptions = availablePlayers.map(p =>
+                `<option value="${p.id}">${esc(p.nickname)}</option>`
+            ).join('');
+
+            let html = '';
+
+            if (unmatched.length > 0) {
+                html += `<p class="section-title">Unmatched Records <span class="badge badge-notmatched">${unmatched.length}</span></p>`;
+                html += `<table>
+                    <thead><tr><th>Nickname</th><th>Power</th><th>Town Hall Level</th><th></th></tr></thead>
+                    <tbody>${unmatched.map(r => `
+                        <tr>
+                            <td>${esc(r.nickname)}</td>
+                            <td>${esc(r.power)}</td>
+                            <td>${esc(r.townHallLevel)}</td>
+                            <td>
+                                <div class="match-actions">
+                                    <button class="btn-success btn-sm add-player-btn" data-record-id="${r.id}">Add Player</button>
+                                    <select class="match-select" data-record-id="${r.id}">
+                                        <option value="">Match to\u2026</option>
+                                        ${playerOptions}
+                                    </select>
+                                    <button class="btn-match btn-sm manual-match-btn" data-record-id="${r.id}">Match</button>
+                                </div>
+                            </td>
+                        </tr>`).join('')}
+                    </tbody></table>`;
+            }
+
+            if (matched.length > 0) {
+                html += `<p class="section-title">Matched Records <span class="badge badge-matched">${matched.length}</span></p>`;
+                html += `<table>
+                    <thead><tr><th>Nickname</th><th>Power</th><th>Town Hall Level</th><th>Status</th></tr></thead>
+                    <tbody>${matched.map(r => `
+                        <tr>
+                            <td>${esc(r.nickname)}</td>
+                            <td>${esc(r.power)}</td>
+                            <td>${esc(r.townHallLevel)}</td>
+                            <td><span class="badge badge-matched">Matched</span></td>
+                        </tr>`).join('')}
+                    </tbody></table>`;
+            }
+
+            if (missingPlayers.length > 0) {
+                html += `<p class="section-title">Missing Players <span class="badge badge-notmatched">${missingPlayers.length}</span></p>`;
+                html += `<div class="btn-row" style="margin-bottom:0.5rem">
+                    <button class="btn-danger btn-sm" id="deactivateMissingBtn">Deactivate All</button>
+                </div>`;
+                html += `<table>
+                    <thead><tr><th>Nickname</th><th>Status</th><th></th></tr></thead>
+                    <tbody>${missingPlayers.map(p => `
+                        <tr>
+                            <td>${esc(p.nickname)}</td>
+                            <td><span class="badge badge-active">${esc(p.status)}</span></td>
+                            <td><button class="btn-danger btn-sm deactivate-one-btn" data-player-id="${p.id}">Deactivate</button></td>
+                        </tr>`).join('')}
+                    </tbody></table>`;
+            }
+
+            wrap.innerHTML = html;
+
+            wrap.querySelectorAll('.add-player-btn').forEach(btn => {
+                btn.addEventListener('click', () => addPlayerFromRecord(btn.dataset.recordId));
+            });
+
+            wrap.querySelectorAll('.manual-match-btn').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    const recordId = btn.dataset.recordId;
+                    const select = wrap.querySelector(`.match-select[data-record-id="${recordId}"]`);
+                    const playerId = select ? select.value : '';
+                    if (!playerId) { alert('Select a player to match with.'); return; }
+                    manualMatchRecord(recordId, parseInt(playerId));
+                });
+            });
+
+            const deactivateBtn = document.getElementById('deactivateMissingBtn');
+            if (deactivateBtn) {
+                deactivateBtn.addEventListener('click', async () => {
+                    if (!confirm(`Deactivate ${missingPlayers.length} missing player(s)?`)) return;
+                    const res = await fetch(`${API}/deactivate-missing/${id}`, { method: 'PATCH' });
+                    if (res.ok) {
+                        loadBatchRecords(id);
+                    } else {
+                        const text = await res.text();
+                        alert(text || 'Failed to deactivate');
+                    }
+                });
+            }
+
+            wrap.querySelectorAll('.deactivate-one-btn').forEach(btn => {
+                btn.addEventListener('click', async () => {
+                    const playerId = btn.dataset.playerId;
+                    const res = await fetch(`${API}/${playerId}/status`, { method: 'PATCH' });
+                    if (res.ok) {
+                        loadBatchRecords(id);
+                    } else {
+                        const text = await res.text();
+                        alert(text || 'Failed to deactivate player');
+                    }
+                });
+            });
+        }
+
+        async function addPlayerFromRecord(recordId) {
+            const res = await fetch(`${API}/from-record/${recordId}`, { method: 'POST' });
+            if (res.ok) {
+                loadBatchRecords(currentBatchId);
+            } else {
+                const text = await res.text();
+                alert(text || 'Failed to add player');
+            }
+        }
+
+        async function manualMatchRecord(recordId, playerId) {
+            const res = await fetch(`${API}/match-record/${recordId}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ playerId })
+            });
+            if (res.ok) {
+                loadBatchRecords(currentBatchId);
+            } else {
+                const text = await res.text();
+                alert(text || 'Failed to match record');
+            }
+        }
+
+        async function deleteBatch(id) {
+            if (!confirm(`Delete batch #${id} and all its records?`)) return;
+
+            const res = await fetch(`${API}/batches/${id}`, { method: 'DELETE' });
+            if (res.ok) {
+                if (currentBatchId == id) {
+                    switchTab('batches');
+                } else {
+                    loadBatches();
+                }
+            }
+        }
+
+        document.getElementById('backToBatches').addEventListener('click', () => switchTab('batches'));
+
+        document.getElementById('deleteBatchBtn').addEventListener('click', () => {
+            if (currentBatchId) deleteBatch(currentBatchId);
+        });
+
+        document.getElementById('addAllPlayersBtn').addEventListener('click', async () => {
+            if (!currentBatchId) return;
+            const res = await fetch(`${API}/from-batch/${currentBatchId}`, { method: 'POST' });
+            if (res.ok) {
+                const result = await res.json();
+                loadBatchRecords(currentBatchId);
+            } else {
+                const text = await res.text();
+                alert(text || 'Failed to add players');
+            }
+        });
+
+        // ── Players ──
+        let playerViewMode = 'table';
+        let gridCols = 2;
+        let playersData = [];
+        let playerSortCol = 'nickname';
+        let playerSortDir = 'asc';
+
+        const gridColsSelect = document.getElementById('gridColsSelect');
+        gridColsSelect.addEventListener('change', () => {
+            const val = gridColsSelect.value;
+            if (val === 'table') {
+                playerViewMode = 'table';
+            } else {
+                playerViewMode = 'grid';
+                gridCols = parseInt(val);
+            }
+            renderPlayers();
+        });
+
+        async function loadPlayers() {
+            const res = await fetch(API);
+            playersData = await res.json();
+            renderPlayers();
+        }
+
+        function sortPlayers(players) {
+            const dir = playerSortDir === 'asc' ? 1 : -1;
+            return [...players].sort((a, b) => {
+                let av, bv;
+                switch (playerSortCol) {
+                    case 'nickname':  av = a.nickname.toLowerCase(); bv = b.nickname.toLowerCase(); break;
+                    case 'power':     av = a.power.toLowerCase(); bv = b.power.toLowerCase(); break;
+                    case 'townHall':  av = a.townHallLevel.toLowerCase(); bv = b.townHallLevel.toLowerCase(); break;
+                    case 'status':    av = a.status; bv = b.status; break;
+                    case 'updated':   av = a.lastUpdatedAt || ''; bv = b.lastUpdatedAt || ''; break;
+                    default:          av = ''; bv = '';
+                }
+                if (av < bv) return -1 * dir;
+                if (av > bv) return 1 * dir;
+                return 0;
+            });
+        }
+
+        function sortClass(col) {
+            return playerSortCol === col ? ' sort-' + playerSortDir : '';
+        }
+
+        function renderPlayers() {
+            const wrap = document.getElementById('playersTableWrap');
+
+            if (playersData.length === 0) {
+                wrap.innerHTML = '<p class="empty-msg">No players yet.</p>';
+                return;
+            }
+
+            if (playerViewMode === 'table') {
+                renderPlayersTable(wrap);
+            } else {
+                renderPlayersGrid(wrap);
+            }
+        }
+
+        function renderPlayersTable(wrap) {
+            const sorted = sortPlayers(playersData);
+
+            wrap.innerHTML = `<table class="players-table">
+                <thead><tr>
+                    <th class="sortable${sortClass('nickname')}" data-col="nickname">Nickname</th>
+                    <th class="sortable${sortClass('power')}" data-col="power">Power</th>
+                    <th class="sortable${sortClass('townHall')}" data-col="townHall">Town Hall</th>
+                    <th class="sortable${sortClass('updated')}" data-col="updated">Last Updated</th>
+                    <th class="sortable${sortClass('status')}" data-col="status">Status</th>
+                    <th></th>
+                </tr></thead>
+                <tbody>${sorted.map(p => `
+                    <tr data-player-id="${p.id}">
+                        <td class="clickable" data-player-id="${p.id}">${esc(p.nickname)}</td>
+                        <td>${esc(p.power)}</td>
+                        <td>${esc(p.townHallLevel)}</td>
+                        <td>${p.lastUpdatedAt ? new Date(p.lastUpdatedAt).toLocaleDateString() : '\u2014'}</td>
+                        <td><span class="badge ${p.status === 'Active' ? 'badge-active' : 'badge-inactive'}">${esc(p.status)}</span></td>
+                        <td>
+                            <div class="actions-cell">
+                                <button class="btn-icon edit-nick-btn" title="Edit nickname">&#9998;</button>
+                                <button class="status-toggle toggle-status-btn" title="Toggle status">${p.status === 'Active' ? 'Deactivate' : 'Activate'}</button>
+                                <button class="btn-icon cancel delete-player-btn" title="Delete player">&times;</button>
+                            </div>
+                        </td>
+                    </tr>`).join('')}
+                </tbody></table>`;
+
+            wrap.querySelectorAll('.players-table th.sortable').forEach(th => {
+                th.addEventListener('click', () => {
+                    const col = th.dataset.col;
+                    if (playerSortCol === col) {
+                        playerSortDir = playerSortDir === 'asc' ? 'desc' : 'asc';
+                    } else {
+                        playerSortCol = col;
+                        playerSortDir = 'asc';
+                    }
+                    renderPlayers();
+                });
+            });
+
+            wrap.querySelectorAll('.clickable').forEach(el => {
+                el.addEventListener('click', () => {
+                    currentPlayerId = el.dataset.playerId;
+                    switchTab('playerDetails');
+                });
+            });
+
+            wrap.querySelectorAll('.edit-nick-btn').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    const tr = btn.closest('tr');
+                    startTableNicknameEdit(tr);
+                });
+            });
+
+            wrap.querySelectorAll('.toggle-status-btn').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    const tr = btn.closest('tr');
+                    togglePlayerStatus(tr.dataset.playerId);
+                });
+            });
+
+            wrap.querySelectorAll('.delete-player-btn').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    const tr = btn.closest('tr');
+                    deletePlayer(tr.dataset.playerId);
+                });
+            });
+        }
+
+        function startTableNicknameEdit(tr) {
+            const nameCell = tr.querySelector('.clickable');
+            const currentName = nameCell.textContent;
+            const actionsCell = tr.querySelector('.actions-cell');
+
+            nameCell.innerHTML = `<input class="inline-edit" type="text" value="${esc(currentName)}" />`;
+            nameCell.classList.remove('clickable');
+            const input = nameCell.querySelector('input');
+            input.focus();
+            input.select();
+
+            actionsCell.innerHTML = `
+                <button class="btn-icon save" title="Save">&#10003;</button>
+                <button class="btn-icon cancel" title="Cancel">&#10007;</button>`;
+
+            const save = async () => {
+                const newName = input.value.trim();
+                if (!newName || newName === currentName) { loadPlayers(); return; }
+                const res = await fetch(`${API}/${tr.dataset.playerId}/nickname`, {
+                    method: 'PATCH',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ nickname: newName })
+                });
+                if (res.ok) { loadPlayers(); } else { const t = await res.text(); alert(t || 'Failed'); }
+            };
+
+            actionsCell.querySelector('.save').addEventListener('click', save);
+            actionsCell.querySelector('.cancel').addEventListener('click', () => loadPlayers());
+            input.addEventListener('keydown', e => {
+                if (e.key === 'Enter') save();
+                if (e.key === 'Escape') loadPlayers();
+            });
+        }
+
+        function renderPlayersGrid(wrap) {
+            wrap.innerHTML = `<div class="player-grid cols-${gridCols}">${playersData.map(p => `
+                <div class="player-card" data-player-id="${p.id}">
+                    <div class="player-card-header">
+                        <span class="nickname clickable" data-player-id="${p.id}">${esc(p.nickname)}</span>
+                        <span class="badge ${p.status === 'Active' ? 'badge-active' : 'badge-inactive'}">${esc(p.status)}</span>
+                    </div>
+                    <div class="player-card-row"><span>Power</span><span>${esc(p.power)}</span></div>
+                    <div class="player-card-row"><span>Town Hall</span><span>${esc(p.townHallLevel)}</span></div>
+                    <div class="player-card-row"><span>Last Updated</span><span>${p.lastUpdatedAt ? new Date(p.lastUpdatedAt).toLocaleDateString() : '\u2014'}</span></div>
+                    <div class="player-card-actions">
+                        <button class="btn-icon edit-nick-btn" title="Edit nickname">&#9998;</button>
+                        <button class="status-toggle toggle-status-btn" title="Toggle status">${p.status === 'Active' ? 'Deactivate' : 'Activate'}</button>
+                        <button class="btn-icon cancel delete-player-btn" title="Delete player">&times;</button>
+                    </div>
+                </div>`).join('')}</div>`;
+
+            wrap.querySelectorAll('.nickname.clickable').forEach(el => {
+                el.addEventListener('click', () => {
+                    currentPlayerId = el.dataset.playerId;
+                    switchTab('playerDetails');
+                });
+            });
+
+            wrap.querySelectorAll('.edit-nick-btn').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    const card = btn.closest('.player-card');
+                    startNicknameEdit(card);
+                });
+            });
+
+            wrap.querySelectorAll('.toggle-status-btn').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    const card = btn.closest('.player-card');
+                    togglePlayerStatus(card.dataset.playerId);
+                });
+            });
+
+            wrap.querySelectorAll('.delete-player-btn').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    const card = btn.closest('.player-card');
+                    deletePlayer(card.dataset.playerId);
+                });
+            });
+        }
+
+        function startNicknameEdit(card) {
+            const nameEl = card.querySelector('.nickname');
+            const currentName = nameEl.textContent;
+            const actionsEl = card.querySelector('.player-card-actions');
+
+            nameEl.innerHTML = `<input class="inline-edit" type="text" value="${esc(currentName)}" />`;
+            const input = nameEl.querySelector('input');
+            input.focus();
+            input.select();
+
+            actionsEl.innerHTML = `
+                <button class="btn-icon save" title="Save">&#10003;</button>
+                <button class="btn-icon cancel" title="Cancel">&#10007;</button>`;
+
+            const save = async () => {
+                const newName = input.value.trim();
+                if (!newName || newName === currentName) { cancel(); return; }
+
+                const res = await fetch(`${API}/${card.dataset.playerId}/nickname`, {
+                    method: 'PATCH',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ nickname: newName })
+                });
+
+                if (res.ok) {
+                    loadPlayers();
+                } else {
+                    const text = await res.text();
+                    alert(text || 'Failed to update nickname');
+                }
+            };
+
+            const cancel = () => loadPlayers();
+
+            actionsEl.querySelector('.save').addEventListener('click', save);
+            actionsEl.querySelector('.cancel').addEventListener('click', cancel);
+            input.addEventListener('keydown', e => {
+                if (e.key === 'Enter') save();
+                if (e.key === 'Escape') cancel();
+            });
+        }
+
+        async function togglePlayerStatus(id) {
+            const res = await fetch(`${API}/${id}/status`, { method: 'PATCH' });
+            if (res.ok) loadPlayers();
+        }
+
+        async function deletePlayer(id) {
+            if (!confirm('Delete this player?')) return;
+            const res = await fetch(`${API}/${id}`, { method: 'DELETE' });
+            if (res.ok) loadPlayers();
+        }
+
+        document.getElementById('deleteAllPlayersBtn').addEventListener('click', async () => {
+            if (!confirm('Delete ALL players and their history? This cannot be undone.')) return;
+            const res = await fetch(`${API}/all`, { method: 'DELETE' });
+            if (res.ok) loadPlayers();
+        });
+
+        document.getElementById('backToPlayers').addEventListener('click', () => switchTab('players'));
+
+        // ── Player Details ──
+        async function loadPlayerDetails(id) {
+            const res = await fetch(`${API}/${id}/details`);
+            if (!res.ok) { switchTab('players'); return; }
+            const p = await res.json();
+            const wrap = document.getElementById('playerDetailWrap');
+
+            document.getElementById('playerDetailTitle').textContent = p.nickname;
+
+            let html = `<div class="current-data">
+                <div class="data-col"><span>Nickname</span><span>${esc(p.nickname)}</span></div>
+                <div class="data-col"><span>Power</span><span>${esc(p.power)}</span></div>
+                <div class="data-col"><span>Town Hall</span><span>${esc(p.townHallLevel)}</span></div>
+                <div class="data-col"><span>Status</span><span class="badge ${p.status === 'Active' ? 'badge-active' : 'badge-inactive'}">${esc(p.status)}</span></div>
+                <div class="data-col"><span>Last Updated</span><span>${p.lastUpdatedAt ? new Date(p.lastUpdatedAt).toLocaleDateString() : '—'}</span></div>
+            </div>`;
+
+            if (p.history && p.history.length > 0) {
+                html += `<p class="section-title">History <span class="badge">${p.history.length}</span></p>`;
+                html += `<div class="history-timeline">${p.history.map(h => `
+                    <div class="history-item">
+                        <div class="history-date">${new Date(h.recordedAt).toLocaleDateString()} &mdash; Batch #${h.batchId}</div>
+                        <div class="history-fields">
+                            <span>Nickname: <strong>${esc(h.nickname)}</strong></span>
+                            <span>Power: <strong>${esc(h.power)}</strong></span>
+                            <span>Town Hall: <strong>${esc(h.townHallLevel)}</strong></span>
+                        </div>
+                    </div>`).join('')}
+                </div>`;
+            } else {
+                html += '<p class="empty-msg">No historical records yet.</p>';
+            }
+
+            wrap.innerHTML = html;
+        }
+
+        // ── Statistics ──
+        function parsePower(str) {
+            if (!str) return null;
+            const s = str.trim().toUpperCase();
+            const match = s.match(/^([\d,.]+)\s*([KMBT]?)$/);
+            if (!match) return null;
+            let num = parseFloat(match[1].replace(/,/g, ''));
+            if (isNaN(num)) return null;
+            const suffix = match[2];
+            if (suffix === 'K') num *= 1e3;
+            else if (suffix === 'M') num *= 1e6;
+            else if (suffix === 'B') num *= 1e9;
+            else if (suffix === 'T') num *= 1e12;
+            return num;
+        }
+
+        function formatDiff(val) {
+            if (val === null) return '<span class="no-data">&mdash;</span>';
+            const abs = Math.abs(val);
+            let s;
+            if (abs >= 1e12) s = (val / 1e12).toFixed(1) + 'T';
+            else if (abs >= 1e9) s = (val / 1e9).toFixed(1) + 'B';
+            else if (abs >= 1e6) s = (val / 1e6).toFixed(1) + 'M';
+            else if (abs >= 1e3) s = (val / 1e3).toFixed(1) + 'K';
+            else s = val.toFixed(0);
+            const prefix = val > 0 ? '+' : '';
+            const cls = val > 0 ? 'diff-positive' : val < 0 ? 'diff-negative' : 'diff-zero';
+            return `<span class="${cls}">${prefix}${s}</span>`;
+        }
+
+        let statsData = null;
+        let statsSortCol = null;
+        let statsSortDir = 'asc';
+
+        async function loadStatistics() {
+            const res = await fetch(`${API}/statistics`);
+            statsData = await res.json();
+            statsSortCol = null;
+            statsSortDir = 'asc';
+            renderStatistics();
+        }
+
+        function buildStatsRows() {
+            if (!statsData || !statsData.dates) return [];
+            return statsData.players.map(p => {
+                const cells = [{ raw: p.nickname, num: p.nickname.toLowerCase() }];
+                let prevNum = null;
+                p.powers.forEach(power => {
+                    const curNum = parsePower(power);
+                    const diff = (curNum !== null && prevNum !== null) ? curNum - prevNum : null;
+                    cells.push({ raw: power, num: curNum !== null ? curNum : -Infinity });
+                    cells.push({ raw: diff, num: diff !== null ? diff : -Infinity });
+                    if (curNum !== null) prevNum = curNum;
+                });
+                return cells;
+            });
+        }
+
+        function renderStatistics() {
+            const wrap = document.getElementById('statsWrap');
+
+            if (!statsData || !statsData.dates || statsData.dates.length === 0 || !statsData.players || statsData.players.length === 0) {
+                wrap.innerHTML = '<p class="empty-msg">No statistics yet. Import some batches!</p>';
+                return;
+            }
+
+            const dates = statsData.dates;
+            const totalCols = 1 + dates.length * 2;
+
+            let headerRow1 = `<th class="sticky-col sortable${statsSortCol === 0 ? ' sort-' + statsSortDir : ''}" data-col="0" rowspan="2">Nickname</th>`;
+            let headerRow2 = '';
+            dates.forEach((d, i) => {
+                const label = new Date(d).toLocaleDateString();
+                const powerIdx = 1 + i * 2;
+                const diffIdx = 2 + i * 2;
+                headerRow1 += `<th colspan="2" class="date-group">${label}</th>`;
+                headerRow2 += `<th class="date-group sortable${statsSortCol === powerIdx ? ' sort-' + statsSortDir : ''}" data-col="${powerIdx}">Power</th>`;
+                headerRow2 += `<th class="date-group sortable${statsSortCol === diffIdx ? ' sort-' + statsSortDir : ''}" data-col="${diffIdx}">Diff</th>`;
+            });
+
+            let rows = buildStatsRows();
+
+            if (statsSortCol !== null) {
+                const col = statsSortCol;
+                const dir = statsSortDir === 'asc' ? 1 : -1;
+                rows.sort((a, b) => {
+                    const av = a[col].num;
+                    const bv = b[col].num;
+                    if (typeof av === 'string' && typeof bv === 'string') return av.localeCompare(bv) * dir;
+                    if (av === bv) return 0;
+                    return (av < bv ? -1 : 1) * dir;
+                });
+            }
+
+            let body = '';
+            rows.forEach(cells => {
+                body += `<tr><td class="sticky-col">${esc(cells[0].raw)}</td>`;
+                for (let i = 1; i < cells.length; i += 2) {
+                    const power = cells[i].raw;
+                    const diff = cells[i + 1].raw;
+                    const powerCell = power ? esc(power) : '<span class="no-data">&mdash;</span>';
+                    body += `<td class="date-group">${powerCell}</td><td class="date-group">${formatDiff(diff)}</td>`;
+                }
+                body += '</tr>';
+            });
+
+            wrap.innerHTML = `<table>
+                <thead>
+                    <tr>${headerRow1}</tr>
+                    <tr>${headerRow2}</tr>
+                </thead>
+                <tbody>${body}</tbody>
+            </table>`;
+
+            wrap.querySelectorAll('th.sortable').forEach(th => {
+                th.addEventListener('click', () => {
+                    const col = parseInt(th.dataset.col);
+                    if (statsSortCol === col) {
+                        statsSortDir = statsSortDir === 'asc' ? 'desc' : 'asc';
+                    } else {
+                        statsSortCol = col;
+                        statsSortDir = 'asc';
+                    }
+                    renderStatistics();
+                });
+            });
+        }
+
+        function esc(str) {
+            const d = document.createElement('div');
+            d.textContent = str;
+            return d.innerHTML;
+        }
+    </script>
+</body>
+</html>
