@@ -14,7 +14,7 @@ namespace PlayersManager
                 ?? throw new InvalidOperationException("Connection string 'Default' not found.");
 
             builder.Services.AddDbContext<AppDbContext>(options =>
-                options.UseSqlServer(connectionString));
+                options.UseNpgsql(connectionString));
 
             builder.Services.AddControllers();
             builder.Services.AddOpenApi();

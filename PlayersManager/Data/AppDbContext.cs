@@ -37,5 +37,13 @@ public class AppDbContext : DbContext
         {
             entity.Property(r => r.MatchStatus).HasConversion<string>();
         });
+
+        modelBuilder.Entity<Batch>()
+            .Property(b => b.Date)
+            .HasColumnType("timestamp without time zone");
+
+        modelBuilder.Entity<HistoricalPlayerRecord>()
+            .Property(h => h.RecordedAt)
+            .HasColumnType("timestamp without time zone");
     }
 }

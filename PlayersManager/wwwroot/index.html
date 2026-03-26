@@ -523,6 +523,66 @@
 
         .players-table th.sort-asc::after  { content: '\2191'; opacity: 1; color: #38bdf8; }
         .players-table th.sort-desc::after { content: '\2193'; opacity: 1; color: #38bdf8; }
+
+        .search-input {
+            background: #0f172a;
+            border: 1px solid #334155;
+            border-radius: 0.375rem;
+            padding: 0.35rem 0.6rem;
+            color: #e2e8f0;
+            font-size: 0.8rem;
+            font-family: inherit;
+            width: 180px;
+        }
+
+        .search-input:focus { outline: none; border-color: #38bdf8; }
+        .search-input::placeholder { color: #475569; }
+
+        .history-form {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 0.5rem;
+            margin-bottom: 1rem;
+            padding: 1rem;
+            background: #0f172a;
+            border: 1px solid #334155;
+            border-radius: 0.5rem;
+        }
+
+        .history-form label {
+            font-size: 0.75rem;
+            color: #64748b;
+            margin-bottom: 0.15rem;
+            display: block;
+        }
+
+        .history-form input,
+        .history-form select {
+            width: 100%;
+            background: #1e293b;
+            border: 1px solid #334155;
+            border-radius: 0.375rem;
+            padding: 0.35rem 0.5rem;
+            color: #e2e8f0;
+            font-size: 0.8rem;
+            font-family: inherit;
+            color-scheme: dark;
+        }
+
+        .history-form input:focus,
+        .history-form select:focus { outline: none; border-color: #38bdf8; }
+
+        .history-form-actions {
+            grid-column: 1 / -1;
+            display: flex;
+            gap: 0.5rem;
+            margin-top: 0.25rem;
+        }
+
+        .order-num {
+            color: #475569;
+            font-size: 0.75rem;
+        }
     </style>
 </head>
 <body>
@@ -537,6 +597,7 @@
         <button class="nav-btn" data-tab="players">&#128101; Players</button>
         <button class="nav-btn hidden-tab" data-tab="playerDetails" id="playerDetailsTab">&#128100; Player Details</button>
         <button class="nav-btn" data-tab="statistics">&#128202; Statistics</button>
+        <button class="nav-btn" data-tab="history">&#128214; History</button>
     </nav>
 
     <div class="main">
@@ -593,6 +654,12 @@
                 <div class="players-toolbar">
                     <h2 style="margin-bottom:0">All Players</h2>
                     <div class="btn-row">
+                        <input type="text" id="playerSearch" class="search-input" placeholder="Search nickname…" />
+                        <select id="playerStatusFilter" class="view-select">
+                            <option value="Active" selected>Active</option>
+                            <option value="Inactive">Inactive</option>
+                            <option value="All">All</option>
+                        </select>
                         <button class="btn-danger btn-sm" id="deleteAllPlayersBtn">Delete All</button>
                         <label style="color:#64748b;font-size:0.8rem;">View</label>
                         <select id="gridColsSelect" class="view-select">
@@ -626,6 +693,18 @@
             <div class="card">
                 <h2>Power Statistics</h2>
                 <div id="statsWrap" class="stats-wrap"></div>
+            </div>
+        </div>
+
+        <!-- History Tab -->
+        <div id="history" class="tab-panel">
+            <div class="card">
+                <div class="detail-header">
+                    <h2>History Records</h2>
+                    <button class="btn-primary btn-sm" id="showCreateHistoryBtn">+ New Record</button>
+                </div>
+                <div id="historyFormWrap" style="display:none"></div>
+                <div id="historyTableWrap"></div>
             </div>
         </div>
     </div>
@@ -663,6 +742,7 @@
                 loadPlayerDetails(currentPlayerId);
             }
             if (tabName === 'statistics') loadStatistics();
+            if (tabName === 'history') loadHistory();
         }
 
         document.querySelectorAll('.nav-btn').forEach(btn => {
@@ -951,6 +1031,8 @@
         let playersData = [];
         let playerSortCol = 'nickname';
         let playerSortDir = 'asc';
+        let playerSearchQuery = '';
+        let playerStatusFilter = 'Active';
 
         const gridColsSelect = document.getElementById('gridColsSelect');
         gridColsSelect.addEventListener('change', () => {
@@ -964,10 +1046,33 @@
             renderPlayers();
         });
 
+        const playerSearchInput = document.getElementById('playerSearch');
+        playerSearchInput.addEventListener('input', () => {
+            playerSearchQuery = playerSearchInput.value.trim().toLowerCase();
+            renderPlayers();
+        });
+
+        const playerStatusSelect = document.getElementById('playerStatusFilter');
+        playerStatusSelect.addEventListener('change', () => {
+            playerStatusFilter = playerStatusSelect.value;
+            renderPlayers();
+        });
+
         async function loadPlayers() {
-            const res = await fetch(API);
+            const res = await fetch(`${API}?includeInactive=true`);
             playersData = await res.json();
             renderPlayers();
+        }
+
+        function filterPlayers(players) {
+            let result = players;
+            if (playerStatusFilter !== 'All') {
+                result = result.filter(p => p.status === playerStatusFilter);
+            }
+            if (playerSearchQuery) {
+                result = result.filter(p => p.nickname.toLowerCase().includes(playerSearchQuery));
+            }
+            return result;
         }
 
         function sortPlayers(players) {
@@ -994,24 +1099,31 @@
 
         function renderPlayers() {
             const wrap = document.getElementById('playersTableWrap');
+            const filtered = filterPlayers(playersData);
 
             if (playersData.length === 0) {
                 wrap.innerHTML = '<p class="empty-msg">No players yet.</p>';
                 return;
             }
 
+            if (filtered.length === 0) {
+                wrap.innerHTML = '<p class="empty-msg">No players match your search.</p>';
+                return;
+            }
+
             if (playerViewMode === 'table') {
-                renderPlayersTable(wrap);
+                renderPlayersTable(wrap, filtered);
             } else {
-                renderPlayersGrid(wrap);
+                renderPlayersGrid(wrap, filtered);
             }
         }
 
-        function renderPlayersTable(wrap) {
-            const sorted = sortPlayers(playersData);
+        function renderPlayersTable(wrap, filtered) {
+            const sorted = sortPlayers(filtered);
 
             wrap.innerHTML = `<table class="players-table">
                 <thead><tr>
+                    <th>#</th>
                     <th class="sortable${sortClass('nickname')}" data-col="nickname">Nickname</th>
                     <th class="sortable${sortClass('power')}" data-col="power">Power</th>
                     <th class="sortable${sortClass('townHall')}" data-col="townHall">Town Hall</th>
@@ -1019,8 +1131,9 @@
                     <th class="sortable${sortClass('status')}" data-col="status">Status</th>
                     <th></th>
                 </tr></thead>
-                <tbody>${sorted.map(p => `
+                <tbody>${sorted.map((p, i) => `
                     <tr data-player-id="${p.id}">
+                        <td class="order-num">${i + 1}</td>
                         <td class="clickable" data-player-id="${p.id}">${esc(p.nickname)}</td>
                         <td>${esc(p.power)}</td>
                         <td>${esc(p.townHallLevel)}</td>
@@ -1112,11 +1225,11 @@
             });
         }
 
-        function renderPlayersGrid(wrap) {
-            wrap.innerHTML = `<div class="player-grid cols-${gridCols}">${playersData.map(p => `
+        function renderPlayersGrid(wrap, filtered) {
+            wrap.innerHTML = `<div class="player-grid cols-${gridCols}">${filtered.map((p, i) => `
                 <div class="player-card" data-player-id="${p.id}">
                     <div class="player-card-header">
-                        <span class="nickname clickable" data-player-id="${p.id}">${esc(p.nickname)}</span>
+                        <span class="nickname clickable" data-player-id="${p.id}"><span class="order-num">${i + 1}.</span> ${esc(p.nickname)}</span>
                         <span class="badge ${p.status === 'Active' ? 'badge-active' : 'badge-inactive'}">${esc(p.status)}</span>
                     </div>
                     <div class="player-card-row"><span>Power</span><span>${esc(p.power)}</span></div>
@@ -1382,6 +1495,174 @@
                 });
             });
         }
+
+        // ── History CRUD ──
+        let historyRecords = [];
+        let historyEditId = null;
+
+        async function loadHistory() {
+            const res = await fetch(`${API}/history`);
+            historyRecords = await res.json();
+            historyEditId = null;
+            document.getElementById('historyFormWrap').style.display = 'none';
+            renderHistoryTable();
+        }
+
+        function renderHistoryTable() {
+            const wrap = document.getElementById('historyTableWrap');
+
+            if (historyRecords.length === 0) {
+                wrap.innerHTML = '<p class="empty-msg">No history records yet.</p>';
+                return;
+            }
+
+            const sorted = [...historyRecords].sort((a, b) =>
+                a.playerNickname.toLowerCase().localeCompare(b.playerNickname.toLowerCase())
+            );
+
+            wrap.innerHTML = `<table>
+                <thead><tr>
+                    <th>ID</th><th>Player</th><th>Batch</th><th>Nickname</th><th>Power</th><th>Town Hall</th><th>Recorded At</th><th></th>
+                </tr></thead>
+                <tbody>${sorted.map(h => `
+                    <tr>
+                        <td>${h.id}</td>
+                        <td>${esc(h.playerNickname)} <span class="order-num">(#${h.playerId})</span></td>
+                        <td>#${h.batchId} <span class="order-num">${new Date(h.batchDate).toLocaleDateString()}</span></td>
+                        <td>${esc(h.nickname)}</td>
+                        <td>${esc(h.power)}</td>
+                        <td>${esc(h.townHallLevel)}</td>
+                        <td>${new Date(h.recordedAt).toLocaleDateString()}</td>
+                        <td>
+                            <div class="actions-cell">
+                                <button class="btn-icon edit-history-btn" data-id="${h.id}" title="Edit">&#9998;</button>
+                                <button class="btn-icon cancel delete-history-btn" data-id="${h.id}" title="Delete">&times;</button>
+                            </div>
+                        </td>
+                    </tr>`).join('')}
+                </tbody></table>`;
+
+            wrap.querySelectorAll('.edit-history-btn').forEach(btn => {
+                btn.addEventListener('click', () => showHistoryForm(parseInt(btn.dataset.id)));
+            });
+
+            wrap.querySelectorAll('.delete-history-btn').forEach(btn => {
+                btn.addEventListener('click', () => deleteHistoryRecord(parseInt(btn.dataset.id)));
+            });
+        }
+
+        async function showHistoryForm(editId) {
+            historyEditId = editId || null;
+            const formWrap = document.getElementById('historyFormWrap');
+
+            const [playersRes, batchesRes] = await Promise.all([
+                fetch(API),
+                fetch(`${API}/batches`)
+            ]);
+            const players = (await playersRes.json()).sort((a, b) =>
+                a.nickname.toLowerCase().localeCompare(b.nickname.toLowerCase())
+            );
+            const batches = await batchesRes.json();
+
+            let data = { playerId: '', batchId: '', nickname: '', power: '', townHallLevel: '', recordedAt: '' };
+            if (historyEditId) {
+                const r = historyRecords.find(h => h.id === historyEditId);
+                if (r) {
+                    data = {
+                        playerId: r.playerId,
+                        batchId: r.batchId,
+                        nickname: r.nickname,
+                        power: r.power,
+                        townHallLevel: r.townHallLevel,
+                        recordedAt: r.recordedAt ? r.recordedAt.substring(0, 10) : ''
+                    };
+                }
+            }
+
+            formWrap.style.display = 'block';
+            formWrap.innerHTML = `<div class="history-form">
+                <div>
+                    <label>Player</label>
+                    <select id="hfPlayer">
+                        <option value="">Select player\u2026</option>
+                        ${players.map(p => `<option value="${p.id}" ${p.id == data.playerId ? 'selected' : ''}>${esc(p.nickname)}</option>`).join('')}
+                    </select>
+                </div>
+                <div>
+                    <label>Batch</label>
+                    <select id="hfBatch">
+                        <option value="">Select batch\u2026</option>
+                        ${batches.map(b => `<option value="${b.id}" ${b.id == data.batchId ? 'selected' : ''}>#${b.id} \u2014 ${new Date(b.date).toLocaleDateString()}</option>`).join('')}
+                    </select>
+                </div>
+                <div>
+                    <label>Nickname</label>
+                    <input type="text" id="hfNickname" value="${esc(data.nickname)}" />
+                </div>
+                <div>
+                    <label>Power</label>
+                    <input type="text" id="hfPower" value="${esc(data.power)}" />
+                </div>
+                <div>
+                    <label>Town Hall Level</label>
+                    <input type="text" id="hfTownHall" value="${esc(data.townHallLevel)}" />
+                </div>
+                <div>
+                    <label>Recorded At</label>
+                    <input type="date" id="hfRecordedAt" value="${data.recordedAt}" />
+                </div>
+                <div class="history-form-actions">
+                    <button class="btn-primary btn-sm" id="hfSaveBtn">${historyEditId ? 'Update' : 'Create'}</button>
+                    <button class="btn-secondary btn-sm" id="hfCancelBtn">Cancel</button>
+                </div>
+            </div>`;
+
+            document.getElementById('hfSaveBtn').addEventListener('click', saveHistoryRecord);
+            document.getElementById('hfCancelBtn').addEventListener('click', () => {
+                formWrap.style.display = 'none';
+                historyEditId = null;
+            });
+        }
+
+        async function saveHistoryRecord() {
+            const body = {
+                playerId: parseInt(document.getElementById('hfPlayer').value),
+                batchId: parseInt(document.getElementById('hfBatch').value),
+                nickname: document.getElementById('hfNickname').value.trim(),
+                power: document.getElementById('hfPower').value.trim(),
+                townHallLevel: document.getElementById('hfTownHall').value.trim(),
+                recordedAt: document.getElementById('hfRecordedAt').value
+            };
+
+            if (!body.playerId || !body.batchId || !body.nickname || !body.recordedAt) {
+                alert('Please fill in all required fields.');
+                return;
+            }
+
+            const url = historyEditId ? `${API}/history/${historyEditId}` : `${API}/history`;
+            const method = historyEditId ? 'PUT' : 'POST';
+
+            const res = await fetch(url, {
+                method,
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(body)
+            });
+
+            if (res.ok) {
+                loadHistory();
+            } else {
+                const text = await res.text();
+                alert(text || 'Failed to save record');
+            }
+        }
+
+        async function deleteHistoryRecord(id) {
+            if (!confirm('Delete this history record?')) return;
+            const res = await fetch(`${API}/history/${id}`, { method: 'DELETE' });
+            if (res.ok) loadHistory();
+        }
+
+        document.getElementById('showCreateHistoryBtn').addEventListener('click', () => showHistoryForm(null));
 
         function esc(str) {
             const d = document.createElement('div');

@@ -551,4 +551,137 @@ public class PlayersController : ControllerBase
             Players = result
         });
     }
+
+    /// <summary>
+    /// Get all historical records.
+    /// </summary>
+    [HttpGet("history")]
+    public async Task<IActionResult> GetHistoricalRecords()
+    {
+        var records = await _db.HistoricalPlayerRecords
+            .Include(h => h.Player)
+            .Include(h => h.Batch)
+            .OrderByDescending(h => h.RecordedAt)
+            .Select(h => new
+            {
+                h.Id,
+                h.PlayerId,
+                PlayerNickname = h.Player.Nickname,
+                h.BatchId,
+                BatchDate = h.Batch.Date,
+                h.Nickname,
+                h.Power,
+                h.TownHallLevel,
+                h.RecordedAt
+            })
+            .ToListAsync();
+
+        return Ok(records);
+    }
+
+    /// <summary>
+    /// Get a single historical record.
+    /// </summary>
+    [HttpGet("history/{id}")]
+    public async Task<IActionResult> GetHistoricalRecord(int id)
+    {
+        var record = await _db.HistoricalPlayerRecords
+            .Include(h => h.Player)
+            .Include(h => h.Batch)
+            .Where(h => h.Id == id)
+            .Select(h => new
+            {
+                h.Id,
+                h.PlayerId,
+                PlayerNickname = h.Player.Nickname,
+                h.BatchId,
+                BatchDate = h.Batch.Date,
+                h.Nickname,
+                h.Power,
+                h.TownHallLevel,
+                h.RecordedAt
+            })
+            .FirstOrDefaultAsync();
+
+        if (record is null)
+            return NotFound();
+
+        return Ok(record);
+    }
+
+    /// <summary>
+    /// Create a new historical record.
+    /// </summary>
+    [HttpPost("history")]
+    public async Task<IActionResult> CreateHistoricalRecord([FromBody] HistoricalRecordDto dto)
+    {
+        var player = await _db.Players.FindAsync(dto.PlayerId);
+        if (player is null)
+            return NotFound("Player not found.");
+
+        var batch = await _db.Batches.FindAsync(dto.BatchId);
+        if (batch is null)
+            return NotFound("Batch not found.");
+
+        var record = new HistoricalPlayerRecord
+        {
+            PlayerId = dto.PlayerId,
+            BatchId = dto.BatchId,
+            Nickname = dto.Nickname,
+            Power = dto.Power,
+            TownHallLevel = dto.TownHallLevel,
+            RecordedAt = dto.RecordedAt
+        };
+
+        _db.HistoricalPlayerRecords.Add(record);
+        await _db.SaveChangesAsync();
+
+        return Ok(new { record.Id, record.PlayerId, record.BatchId, record.Nickname, record.Power, record.TownHallLevel, record.RecordedAt });
+    }
+
+    /// <summary>
+    /// Update an existing historical record.
+    /// </summary>
+    [HttpPut("history/{id}")]
+    public async Task<IActionResult> UpdateHistoricalRecord(int id, [FromBody] HistoricalRecordDto dto)
+    {
+        var record = await _db.HistoricalPlayerRecords.FindAsync(id);
+        if (record is null)
+            return NotFound();
+
+        var player = await _db.Players.FindAsync(dto.PlayerId);
+        if (player is null)
+            return NotFound("Player not found.");
+
+        var batch = await _db.Batches.FindAsync(dto.BatchId);
+        if (batch is null)
+            return NotFound("Batch not found.");
+
+        record.PlayerId = dto.PlayerId;
+        record.BatchId = dto.BatchId;
+        record.Nickname = dto.Nickname;
+        record.Power = dto.Power;
+        record.TownHallLevel = dto.TownHallLevel;
+        record.RecordedAt = dto.RecordedAt;
+
+        await _db.SaveChangesAsync();
+
+        return Ok(new { record.Id, record.PlayerId, record.BatchId, record.Nickname, record.Power, record.TownHallLevel, record.RecordedAt });
+    }
+
+    /// <summary>
+    /// Delete a historical record.
+    /// </summary>
+    [HttpDelete("history/{id}")]
+    public async Task<IActionResult> DeleteHistoricalRecord(int id)
+    {
+        var record = await _db.HistoricalPlayerRecords.FindAsync(id);
+        if (record is null)
+            return NotFound();
+
+        _db.HistoricalPlayerRecords.Remove(record);
+        await _db.SaveChangesAsync();
+
+        return NoContent();
+    }
 }
