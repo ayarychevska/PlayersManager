@@ -1,0 +1,39 @@
+Example 1:
+
+Create a web application that imports a list of players from a JSON file and stores the data in a relational database.
+
+The system must:
+
+1. Accept a JSON file upload containing an array of player objects.
+2. Automatically create a new "Batch" record every time a new JSON file is uploaded.
+3. Parse and store all player records associated with that batch.
+4. Maintain three database tables:
+   - Batches
+   - BatchPlayers (parsed records per batch)
+   - Players (master list of players)
+
+Each player object in JSON has the following structure:
+{
+  "nickname": "Eve",
+  "power": "214.9M",
+  "town_hall_level": "Gold 5"
+}
+
+Ensure proper relational mapping between batches and players.
+Use clean architecture and best practices.
+
+Example 2:
+
+When each batch is uploaded, compare it against the current Players table. If a player is not found in the uploaded JSON but exists as an active record in the database, include that player in a separate table on UI. For each of those players, provide a button to inactivate them (this should only update their status from Active to Inactive, without deleting the record).
+
+Example 3:
+
+Create a new tab called "Statistics". Display a table with all players.
+Structure:
+- First column: Player Nickname
+- For each batch (ordered by date):
+    - Column: Batch Date → Player power in that batch
+    - Next column: Power Difference → Current power minus previous batch power
+- all columns must be orderable
+
+
